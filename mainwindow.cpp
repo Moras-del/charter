@@ -8,9 +8,12 @@ double computeDerivative(double &x, te_expr *function, double delta);
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
-    minRange = new QLineEdit;
-    maxRange = new QLineEdit;
+    minRange = new QLineEdit("-10");
+    minRange->setPlaceholderText("min range");
+    maxRange = new QLineEdit("10");
+    maxRange->setPlaceholderText("max range");
     functionEdit = new QLineEdit;
+    functionEdit->setPlaceholderText("f(x)");
     derivativeEnabled = new QCheckBox("derivative");
     button = new QPushButton("Compute!");
     chart = new QChart;
@@ -50,14 +53,18 @@ void MainWindow::setWidgets()
 void MainWindow::handleCompute()
 {
     chart->removeAllSeries();
-    int min = minRange->text().toInt();
-    int max = maxRange->text().toInt();
+    double min = minRange->text().isEmpty()? -10 : minRange->text().toDouble();
+    double max = maxRange->text().isEmpty()? -10 : maxRange->text().toDouble();
     QString expression = functionEdit->text();
-    double x;
-    int err;
-    te_variable var = {"x", &x};
-    te_expr *expr = te_compile(expression.toUtf8().data(), &var, 1, &err);
-
+    int size = (max-min)/0.001 + 1;
+    if(derivativeEnabled->isChecked())
+    {
+        size *= 2;
+        size++;
+    }
+    double result[size];
+    double *ptr = result;
+    computeFunction(qMakePair(min, max), 0.001, expression, derivativeEnabled->isChecked(), result);
     QLineSeries *series = new QLineSeries;
     series->setName(expression);
     QLineSeries *derivativeSeries;
@@ -66,21 +73,35 @@ void MainWindow::handleCompute()
         derivativeSeries = new QLineSeries;
         derivativeSeries->setName("derivative");
     }
+    for(double i = min; i <= max; i += 0.001)
+    {
+        *series << QPointF(i, *(ptr++));
+        if(derivativeEnabled->isChecked())
+            *derivativeSeries << QPointF(i, *(ptr++));
+    }
+    chart->addSeries(series);
+    if(derivativeEnabled->isChecked())
+        chart->addSeries(derivativeSeries);
+    chart->createDefaultAxes();
+}
 
+void MainWindow::computeFunction(QPair<double, double> range, double interval, QString expression, bool derivative, double *result)
+{
+    double x;
+    int err;
+    te_variable var = {"x", &x};
+    te_expr *expr = te_compile(expression.toUtf8().data(), &var, 1, &err);
     if(expr)
     {
-        for(x = min; x <= max; x += 0.001)
+        for(x = range.first; x <= range.second; x += interval)
         {
-            *series << QPointF(x, te_eval(expr));
-            if(derivativeEnabled->isChecked())
-                *derivativeSeries << QPointF(x, computeDerivative(x, expr, 0.0001));
+            auto val = te_eval(expr);
+            *(result++) = val;
+            if(derivative)
+                *(result++) = computeDerivative(x, expr, 0.0001);
         }
-        chart->addSeries(series);
-        if(derivativeEnabled->isChecked())
-            chart->addSeries(derivativeSeries);
-        te_free(expr);
     }
-    chart->createDefaultAxes();
+    te_free(expr);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)

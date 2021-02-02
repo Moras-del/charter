@@ -22,6 +22,7 @@ public:
 private slots:
     void handleCompute();
 private:
+    void computeFunction(QPair<double, double> range, double interval, QString expression, bool derivative, double* result);
     void setWidgets();
     QLineEdit *minRange;
     QLineEdit *maxRange;
