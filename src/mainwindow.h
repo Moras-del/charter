@@ -20,7 +20,7 @@ public:
     ~MainWindow();
     virtual void keyPressEvent(QKeyEvent *event) override;
 private slots:
-    void handleCompute();
+    void handleButton();
 private:
     void computeFunction(QPair<double, double> range, double interval, QString expression, bool derivative, double* result);
     void setWidgets();

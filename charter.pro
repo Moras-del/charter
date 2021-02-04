@@ -17,10 +17,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        chartview.cpp \
-        main.cpp \
-        mainwindow.cpp \
-        tinyexpr.c
+        src/chartview.cpp \
+        src/main.cpp \
+        src/mainwindow.cpp \
+        include/tinyexpr.c
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -28,7 +28,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    chartview.h \
-    mainwindow.h \
-    tinyexpr.h \
-    tinyexpr.h
+    src/chartview.h \
+    src/mainwindow.h \
+    include/tinyexpr.h \

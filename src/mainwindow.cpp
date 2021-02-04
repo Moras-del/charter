@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-#include "tinyexpr.h"
+#include "../include/tinyexpr.h"
 
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     chartView = new ChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
     setWidgets();
-    connect(button, SIGNAL(clicked()), this, SLOT(handleCompute()));
+    connect(button, SIGNAL(clicked()), this, SLOT(handleButton()));
 }
 
 MainWindow::~MainWindow()
@@ -50,7 +50,7 @@ void MainWindow::setWidgets()
     setCentralWidget(widget);
 }
 
-void MainWindow::handleCompute()
+void MainWindow::handleButton()
 {
     chart->removeAllSeries();
     double min = minRange->text().isEmpty()? -10 : minRange->text().toDouble();
@@ -58,27 +58,29 @@ void MainWindow::handleCompute()
     QString expression = functionEdit->text();
     int size = (max-min)/0.001 + 1;
     if(derivativeEnabled->isChecked())
-    {
-        size *= 2;
-        size++;
-    }
+        size = size*2+1;
     double result[size];
     double *ptr = result;
+
     computeFunction(qMakePair(min, max), 0.001, expression, derivativeEnabled->isChecked(), result);
+
     QLineSeries *series = new QLineSeries;
-    series->setName(expression);
+    series.setName(expression);
+
     QLineSeries *derivativeSeries;
     if(derivativeEnabled->isChecked())
     {
         derivativeSeries = new QLineSeries;
         derivativeSeries->setName("derivative");
     }
+
     for(double i = min; i <= max; i += 0.001)
     {
         *series << QPointF(i, *(ptr++));
         if(derivativeEnabled->isChecked())
             *derivativeSeries << QPointF(i, *(ptr++));
     }
+
     chart->addSeries(series);
     if(derivativeEnabled->isChecked())
         chart->addSeries(derivativeSeries);
@@ -107,9 +109,7 @@ void MainWindow::computeFunction(QPair<double, double> range, double interval, Q
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     if(event->key() == Qt::Key_Return)
-    {
         button->click();
-    }
 }
 
 double computeDerivative(double &x, te_expr *function, double delta)
