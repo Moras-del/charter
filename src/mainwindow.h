@@ -1,6 +1,6 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
-
+#include "calculator.h"
 #include "chartview.h"
 #include "../include/tinyexpr.h"
 #include <QtCharts>
@@ -22,9 +22,6 @@ public:
 private slots:
     void handleButton();
 private:
-    QList<QPointF> compute(QPair<double, double> range, double interval, QString expression, double (*computer)(double &x, te_expr *func));
-    static double computeFunction(double &x, te_expr *function);
-    static double computeDerivative(double &x, te_expr* function);
     void addSeries(const QList<QPointF>& data, const QString& name);
     void setWidgets();
     QLineEdit *minRange;
@@ -34,6 +31,7 @@ private:
     QPushButton *button;
     QChart *chart;
     QChartView *chartView;
+    Calculator *calculator;
 };
 
 #endif // MAINWINDOW_H
