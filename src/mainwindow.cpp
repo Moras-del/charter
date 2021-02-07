@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "../include/tinyexpr.h"
 
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -9,29 +8,22 @@ double computeDerivative(double &x, te_expr *function, double delta);
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     minRange = new QLineEdit("-10");
-    minRange->setPlaceholderText("min range");
     maxRange = new QLineEdit("10");
-    maxRange->setPlaceholderText("max range");
     functionEdit = new QLineEdit;
-    functionEdit->setPlaceholderText("f(x)");
     derivativeEnabled = new QCheckBox("derivative");
     button = new QPushButton("Compute!");
     chart = new QChart;
     chartView = new ChartView(chart);
+
+    minRange->setPlaceholderText("min range");
+    maxRange->setPlaceholderText("max range");
+    functionEdit->setPlaceholderText("f(x)");
     chartView->setRenderHint(QPainter::Antialiasing);
+
     setWidgets();
     connect(button, SIGNAL(clicked()), this, SLOT(handleButton()));
 }
 
-MainWindow::~MainWindow()
-{
-    delete minRange;
-    delete maxRange;
-    delete functionEdit;
-    delete button;
-    delete chart;
-    delete chartView;
-}
 
 void MainWindow::setWidgets()
 {
@@ -55,40 +47,21 @@ void MainWindow::handleButton()
     chart->removeAllSeries();
     double min = minRange->text().isEmpty()? -10 : minRange->text().toDouble();
     double max = maxRange->text().isEmpty()? -10 : maxRange->text().toDouble();
+    QPair<double, double> range = qMakePair(min, max);
     QString expression = functionEdit->text();
-    int size = (max-min)/0.001 + 1;
-    if(derivativeEnabled->isChecked())
-        size = size*2+1;
-    double result[size];
-    double *ptr = result;
-
-    computeFunction(qMakePair(min, max), 0.001, expression, derivativeEnabled->isChecked(), result);
-
-    QLineSeries *series = new QLineSeries;
-    series.setName(expression);
-
-    QLineSeries *derivativeSeries;
+    QList<QPointF> data = compute(range, 0.001, expression, computeFunction);
+    addSeries(data, "f(x)");
     if(derivativeEnabled->isChecked())
     {
-        derivativeSeries = new QLineSeries;
-        derivativeSeries->setName("derivative");
+        data = compute(range, 0.001, expression, computeDerivative);
+        addSeries(data, "f'(x)");
     }
-
-    for(double i = min; i <= max; i += 0.001)
-    {
-        *series << QPointF(i, *(ptr++));
-        if(derivativeEnabled->isChecked())
-            *derivativeSeries << QPointF(i, *(ptr++));
-    }
-
-    chart->addSeries(series);
-    if(derivativeEnabled->isChecked())
-        chart->addSeries(derivativeSeries);
     chart->createDefaultAxes();
 }
 
-void MainWindow::computeFunction(QPair<double, double> range, double interval, QString expression, bool derivative, double *result)
+QList<QPointF> MainWindow::compute(QPair<double, double> range, double interval, QString expression, double (*computer)(double &x, te_expr *func))
 {
+    QList<QPointF> result;
     double x;
     int err;
     te_variable var = {"x", &x};
@@ -97,13 +70,35 @@ void MainWindow::computeFunction(QPair<double, double> range, double interval, Q
     {
         for(x = range.first; x <= range.second; x += interval)
         {
-            auto val = te_eval(expr);
-            *(result++) = val;
-            if(derivative)
-                *(result++) = computeDerivative(x, expr, 0.0001);
+            double y = computer(x, expr);
+            result.push_back({x, y});
         }
     }
     te_free(expr);
+    return result;
+}
+
+double MainWindow::computeFunction(double &x, te_expr *function)
+{
+    return te_eval(function);
+}
+
+double MainWindow::computeDerivative(double &x, te_expr *function)
+{
+    double delta = 0.0001;
+    double result1 = te_eval(function);
+    x += delta;
+    double result2 = te_eval(function);
+    x -=delta;
+    return (result2-result1)/delta;
+}
+
+void MainWindow::addSeries(const QList<QPointF>& data, const QString& name)
+{
+    QLineSeries *series = new QLineSeries;
+    series->setName(name);
+    series->append(data);
+    chart->addSeries(series);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
@@ -112,20 +107,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         button->click();
 }
 
-double computeDerivative(double &x, te_expr *function, double delta)
+MainWindow::~MainWindow()
 {
-    double result1 = te_eval(function);
-    x += delta;
-    double result2 = te_eval(function);
-    x -=delta;
-    return (result2-result1)/delta;
+    delete minRange;
+    delete maxRange;
+    delete functionEdit;
+    delete button;
+    delete chart;
+    delete chartView;
 }
-
-
-
-
-
-
-
-
-
